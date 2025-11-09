@@ -55,12 +55,15 @@
         <!-- Direction is auto-detected from the page language; no manual RTL toggle -->
       </div>
 
+      <!-- Product count (shows how many products are visible / total) -->
+      <div id="productCount" class="product-count" aria-live="polite"></div>
+
       <!-- Products Grid -->
       <div id="productsContainer" class="products-grid"></div>
 
       <!-- Show more products (pagination) -->
       <div class="products-footer">
-        <button id="showMoreBtn" class="show-more-btn">Show more</button>
+        <button id="showMoreBtn" class="show-more-btn">Show More</button>
       </div>
 
       <!-- Selected Products -->
@@ -70,7 +73,17 @@
         <div class="selected-actions">
           <button id="clearAllBtn" class="clear-btn">Clear all</button>
           <button id="generateRoutine" class="generate-btn">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Routine
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span class="btn-label">Generate Routine</span>
+            <span class="btn-spinner" aria-hidden="true" hidden></span>
+          </button>
+          <button
+            id="copyRoutineBtn"
+            class="copy-btn"
+            disabled
+            title="Copy last generated routine"
+          >
+            Copy Routine
           </button>
         </div>
       </div>
@@ -81,7 +94,7 @@
         <div id="chatWindow" class="chat-window"></div>
 
         <form id="chatForm" class="chat-form">
-          <label for="userInput" class="visually-hidden">Message</label>
+          <label for="userInput" class="visually-hidden"></label>
           <input
             id="userInput"
             name="userInput"

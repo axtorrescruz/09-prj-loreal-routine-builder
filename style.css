@@ -12,6 +12,7 @@
   --muted: #666666;
   --bg: #ffffff;
   --card-border: #e6e6e6;
+  --accent-blue: #86bfff; /* primary action blue for Show More */
 }
 
 /* —— body + layout —— */
@@ -32,12 +33,6 @@ body {
 .site-header {
   text-align: center;
   padding: 18px 0 6px;
-  .product-body {
-    flex: 1;
-    padding-right: 44px;
-  }
-  display: block;
-  margin: 0 auto 8px;
 }
 .site-title {
   font-size: 20px;
@@ -182,6 +177,7 @@ body {
 }
 .product-body {
   flex: 1;
+  padding-right: 44px;
 }
 .product-name {
   font-size: 15px;
@@ -203,13 +199,17 @@ body {
   font-size: 13px;
 }
 .product-desc {
-  display: none;
   margin-top: 10px;
   color: #333;
   font-size: 13px;
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 260ms ease, opacity 220ms ease;
+  opacity: 0;
 }
 .product-desc.open {
-  display: block;
+  max-height: 420px; /* comfortably fits most descriptions */
+  opacity: 1;
 }
 
 /* selected state */
@@ -307,6 +307,14 @@ body {
   border-radius: 8px;
   cursor: pointer;
 }
+/* disabled state for primary action */
+.generate-btn[disabled],
+.generate-btn.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  filter: grayscale(0.05);
+}
+
 
 /* chat messages styles */
 .chat-message {
@@ -371,16 +379,23 @@ body.rtl .msg-user {
 
 /* Show more button */
 .products-footer {
-  text-align: center;
+  display: flex;
+  justify-content: center;
   margin: 8px 0 28px;
 }
 .show-more-btn {
   padding: 10px 14px;
   border-radius: 8px;
-  border: 1px solid var(--card-border);
-  background: #fff;
+  border: none;
+  background: var(--accent-blue);
+  color: #fff;
   cursor: pointer;
 }
 .show-more-btn:hover {
-  background: #fafafa;
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+}
+.show-more-btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

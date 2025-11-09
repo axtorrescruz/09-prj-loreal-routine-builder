@@ -31,6 +31,13 @@ const selectedProductsList = document.getElementById("selectedProductsList");
 const generateRoutineBtn = document.getElementById("generateRoutine");
 const clearAllBtn = document.getElementById("clearAllBtn");
 const showMoreBtn = document.getElementById("showMoreBtn");
+// additional button parts inside the generate button and copy button
+const btnSpinner =
+  generateRoutineBtn && generateRoutineBtn.querySelector(".btn-spinner");
+const btnLabel =
+  generateRoutineBtn && generateRoutineBtn.querySelector(".btn-label");
+const copyRoutineBtn = document.getElementById("copyRoutineBtn");
+const sendBtn = document.getElementById("sendBtn");
 
 const chatForm = document.getElementById("chatForm");
 const userInput = document.getElementById("userInput");
@@ -41,6 +48,8 @@ let products = []; // full products list from products.json
 let selectedProductIds = []; // array of numeric ids
 let conversationHistory = []; // { role: 'user'|'assistant' , content: '...' }
 let productsToShow = 9; // pagination: how many products to show initially and increment
+let expandedProductIds = new Set(); // track expanded details so they survive re-renders
+let lastRoutineText = ""; // store last generated routine for copy-to-clipboard
 
 const LOCAL_KEY = "selectedProducts"; // localStorage key
 
@@ -119,6 +128,7 @@ function renderProductGrid() {
   productsContainer.innerHTML = list
     .map((p) => {
       const isSelected = selectedProductIds.includes(p.id);
+      const isExpanded = expandedProductIds.has(p.id);
       return `
       <article class="product-card ${isSelected ? "selected" : ""}" data-id="${
         p.id
@@ -130,15 +140,13 @@ function renderProductGrid() {
           <h3 class="product-name">${p.name}</h3>
           <p class="product-brand">${p.brand}</p>
           <div class="product-actions">
-            <button class="info-btn" aria-expanded="false" aria-controls="desc-${
-              p.id
-            }">Details</button>
+            <button class="info-btn" aria-expanded="${isExpanded}" aria-controls="desc-${
+        p.id
+      }">Details</button>
           </div>
-          <div id="desc-${
-            p.id
-          }" class="product-desc" aria-hidden="true">${escapeHtml(
-        p.description
-      )}</div>
+          <div id="desc-${p.id}" class="product-desc ${
+        isExpanded ? "open" : ""
+      }" aria-hidden="${!isExpanded}">${escapeHtml(p.description)}</div>
         </div>
         <div class="select-badge" aria-hidden="true">${
           isSelected ? '<i class="fa-solid fa-check"></i>' : ""
@@ -188,16 +196,23 @@ function attachProductCardHandlers() {
       }
     });
 
-    // info button toggles description
+    // info button toggles description and persist state in expandedProductIds
     const infoBtn = card.querySelector(".info-btn");
     const desc = card.querySelector(".product-desc");
     if (infoBtn && desc) {
       infoBtn.addEventListener("click", (ev) => {
         ev.stopPropagation();
-        const expanded = infoBtn.getAttribute("aria-expanded") === "true";
-        infoBtn.setAttribute("aria-expanded", String(!expanded));
-        desc.setAttribute("aria-hidden", String(expanded));
-        desc.classList.toggle("open", !expanded);
+        const currentlyExpanded = expandedProductIds.has(id);
+        if (currentlyExpanded) {
+          expandedProductIds.delete(id);
+        } else {
+          expandedProductIds.add(id);
+        }
+        const nowExpanded = expandedProductIds.has(id);
+        // update DOM attributes/classes for the toggled product only
+        infoBtn.setAttribute("aria-expanded", String(nowExpanded));
+        desc.setAttribute("aria-hidden", String(!nowExpanded));
+        desc.classList.toggle("open", nowExpanded);
       });
     }
   });
@@ -366,6 +381,11 @@ async function generateRoutine() {
   });
   renderChat();
 
+  // show spinner / disable generate button while the worker runs
+  if (generateRoutineBtn) generateRoutineBtn.disabled = true;
+  if (btnSpinner) btnSpinner.hidden = false;
+  if (btnLabel) btnLabel.textContent = "Generating…";
+
   try {
     const assistantText = await callWorker(messages);
     // replace the last assistant placeholder with real content
@@ -378,10 +398,12 @@ async function generateRoutine() {
     ) {
       conversationHistory.pop();
     }
-    conversationHistory.push({
-      role: "assistant",
-      content: assistantText.trim(),
-    });
+    const trimmed = assistantText.trim();
+    // store for copy-to-clipboard
+    lastRoutineText = trimmed;
+    if (copyRoutineBtn) copyRoutineBtn.disabled = false;
+
+    conversationHistory.push({ role: "assistant", content: trimmed });
     renderChat();
   } catch (err) {
     conversationHistory.push({
@@ -390,6 +412,11 @@ async function generateRoutine() {
         "Sorry — I couldn't generate the routine right now. Please try again.",
     });
     renderChat();
+  } finally {
+    // restore button state
+    if (btnSpinner) btnSpinner.hidden = true;
+    if (btnLabel) btnLabel.textContent = "Generate Routine";
+    if (generateRoutineBtn) generateRoutineBtn.disabled = false;
   }
 }
 
@@ -421,6 +448,26 @@ chatForm.addEventListener("submit", async (e) => {
     renderChat();
   }
 });
+
+// copy-to-clipboard handler for last generated routine
+if (copyRoutineBtn) {
+  copyRoutineBtn.addEventListener("click", async () => {
+    if (!lastRoutineText) {
+      alert("No generated routine available to copy.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(lastRoutineText);
+      // small, simple feedback for beginners
+      alert("Routine copied to clipboard.");
+    } catch (err) {
+      console.warn("Copy failed", err);
+      alert(
+        "Could not copy to clipboard. You can select the routine text and copy manually."
+      );
+    }
+  });
+}
 
 /* ---------------- Initialization & event wiring ---------------- */
 generateRoutineBtn.addEventListener("click", generateRoutine);
@@ -456,6 +503,11 @@ if (showMoreBtn) {
     .filter(Boolean);
   // detect document direction before rendering
   detectAndSetDirection();
+  // ensure UI defaults (no unintended loading states)
+  if (btnSpinner) btnSpinner.hidden = true;
+  if (btnLabel) btnLabel.textContent = "Generate Routine";
+  if (copyRoutineBtn) copyRoutineBtn.disabled = true;
+
   renderProductGrid();
   renderSelectedProducts();
   // init empty chat message

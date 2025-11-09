@@ -64,18 +64,6 @@ body {
   border: 1px solid var(--card-border);
   font-size: 16px;
 }
-.rtl-section {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.rtl-toggle {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--card-border);
-  background: #fff;
-  cursor: pointer;
-}
 
 /* chat section */
 .chatbox {
@@ -148,8 +136,10 @@ body {
   grid-template-columns: repeat(3, 1fr);
   gap: 18px;
   margin: 18px 0;
+  /* default LTR; flipped to rtl when body.rtl is present */
 }
 
+/* product card layout */
 .product-card {
   background: #fff;
   border: 1px solid var(--card-border);
@@ -177,7 +167,8 @@ body {
 }
 .product-body {
   flex: 1;
-  padding-right: 44px;
+  /* use logical property so it behaves well in both directions */
+  padding-inline-end: 44px; /* previously padding-right: 44px */
 }
 .product-name {
   font-size: 15px;
@@ -252,6 +243,7 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  justify-content: flex-start; /* LTR default */
 }
 .selected-chip {
   display: flex;
@@ -315,7 +307,6 @@ body {
   filter: grayscale(0.05);
 }
 
-
 /* chat messages styles */
 .chat-message {
   margin-bottom: 12px;
@@ -332,6 +323,7 @@ body {
   padding: 10px 12px;
   border-radius: 10px;
   font-size: 14px;
+  word-break: break-word;
 }
 .msg-assistant .msg-content {
   background: #fff;
@@ -348,7 +340,8 @@ body.rtl {
   direction: rtl;
 }
 body.rtl .controls {
-  direction: rtl;
+  /* reverse the order so search appears on the right */
+  flex-direction: row-reverse;
 }
 body.rtl .select-badge {
   right: auto;
@@ -356,9 +349,43 @@ body.rtl .select-badge {
 }
 body.rtl .product-card {
   direction: rtl;
+  /* put media on the right and text on the left visually */
+  flex-direction: row-reverse;
+  text-align: right;
+}
+/* swap product-body padding so spacing remains consistent using logical properties */
+body.rtl .product-body {
+  padding-inline-end: 12px;
+  padding-inline-start: 44px;
+}
+/* product name/brand and chip info right-aligned on RTL */
+body.rtl .product-name,
+body.rtl .product-brand,
+body.rtl .chip-info {
+  text-align: right;
+}
+/* ensure product grid places items starting from the right */
+body.rtl .products-grid {
+  direction: rtl;
+}
+/* selected chips layout tweak: flow right-to-left and align to right */
+body.rtl #selectedProductsList {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+/* search input aligns text to the right when RTL */
+body.rtl .controls input[type="search"] {
+  text-align: right;
+}
+/* chat: swap bubble alignment for RTL */
+body.rtl .msg-assistant {
+  justify-content: flex-end;
 }
 body.rtl .msg-user {
   justify-content: flex-start;
+}
+body.rtl .msg-content {
+  text-align: right;
 }
 
 /* responsive tweaks */
@@ -374,6 +401,11 @@ body.rtl .msg-user {
   }
   .chat-window {
     height: 220px;
+  }
+
+  /* on small viewports keep column flow but also respect RTL ordering */
+  body.rtl .controls {
+    flex-direction: column;
   }
 }
 
@@ -398,4 +430,20 @@ body.rtl .msg-user {
 .show-more-btn[disabled] {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* ✅ Applied when browser auto-translation is detected */
+.translated-rtl {
+    direction: rtl;
+}
+
+/* ✅ Reverse flex layouts */
+.translated-rtl .button-row {
+    display: flex;
+    flex-direction: row-reverse;
+}
+
+/* ✅ Right-align text for RTL */
+.translated-rtl .selection {
+    text-align: right;
 }

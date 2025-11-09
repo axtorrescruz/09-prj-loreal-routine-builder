@@ -1,26 +1,3 @@
-/*
-  script.js
-  Smart Routine Builder - product-aware routine generation and chat.
-
-  Edits limited to this file. Use the existing `workerUrl` constant below
-  as the Cloudflare Worker endpoint. Do NOT place API keys in client code.
-
-  This file implements:
-   - product loading and rendering
-   - search + category filtering (combined)
-   - product selection (click, keyboard) with visual state
-   - selected products panel with remove and clear-all
-   - description reveal per product (accessible)
-   - persistence of selected products to localStorage
-   - RTL toggle (sets document.dir and adds .rtl for CSS rules)
-   - chat UI, conversation history and follow-up questions
-   - callWorker(messages) wrapper that posts to `workerUrl`
-
-  localStorage keys:
-    - selectedProducts => JSON array of product ids (numbers)
-
-*/
-
 const workerUrl = "https://loreal-worker.axtorr7701.workers.dev/"; // Cloudflare Worker endpoint (single source-of-truth)
 
 /* ---------------- DOM references ---------------- */
@@ -113,6 +90,25 @@ function getFilteredProducts() {
   });
 }
 
+function detectAndSetDirection() {
+  // Determine page direction from HTML lang or browser locale.
+  const rtlLangs = ["ar", "he", "fa", "ur", "ps", "dv", "syr"];
+  const lang = (
+    document.documentElement.lang ||
+    navigator.language ||
+    "en"
+  ).toLowerCase();
+  const prefix = lang.split("-")[0];
+  const isRtl = rtlLangs.includes(prefix);
+  document.documentElement.dir = isRtl ? "rtl" : "ltr";
+  document.body.classList.toggle("rtl", isRtl);
+}
+
+// helper to check runtime direction (used by render functions)
+function isPageRtl() {
+  return String(document.documentElement.dir || "").toLowerCase() === "rtl";
+}
+
 function renderProductGrid() {
   const allList = getFilteredProducts();
   if (!allList.length) {
@@ -123,7 +119,12 @@ function renderProductGrid() {
   }
 
   const total = allList.length;
-  const list = allList.slice(0, productsToShow);
+  let list = allList.slice(0, productsToShow);
+
+  // Use CSS 'direction' to flip the visual flow for RTL.
+  if (productsContainer) {
+    productsContainer.style.direction = isPageRtl() ? "rtl" : "ltr";
+  }
 
   productsContainer.innerHTML = list
     .map((p) => {
@@ -274,21 +275,6 @@ function clearAllSelections() {
   saveSelectedToLocalStorage();
   renderSelectedProducts();
   renderProductGrid();
-}
-
-/* ---------------- Direction (auto-detect RTL) ---------------- */
-function detectAndSetDirection() {
-  // Determine page direction from HTML lang or browser locale.
-  const rtlLangs = ["ar", "he", "fa", "ur", "ps", "dv", "syr"];
-  const lang = (
-    document.documentElement.lang ||
-    navigator.language ||
-    "en"
-  ).toLowerCase();
-  const prefix = lang.split("-")[0];
-  const isRtl = rtlLangs.includes(prefix);
-  document.documentElement.dir = isRtl ? "rtl" : "ltr";
-  document.body.classList.toggle("rtl", isRtl);
 }
 
 /* ---------------- Worker integration ---------------- */
@@ -519,8 +505,25 @@ if (showMoreBtn) {
   renderChat();
 })();
 
-/* Notes:
- - Keep comments on each function to explain inputs/outputs and side effects.
- - The Cloudflare Worker must accept { messages } and forward to OpenAI. This client expects worker to return OpenAI-style response with choices[0].message.content.
- - localStorage key used: 'selectedProducts'. If localStorage is unavailable we fallback to in-memory state and log a warning.
-*/
+const observer = new MutationObserver(() => {
+    const sample = document.querySelector(".selection");
+
+    if (!sample) return;
+
+    const original = sample.getAttribute("data-original");
+
+    // Browser translation changed the text → apply RTL layout
+    if (original && sample.textContent.trim() !== original.trim()) {
+        document.documentElement.setAttribute("dir", "rtl");
+        document.body.classList.add("translated-rtl");
+        observer.disconnect();
+    }
+});
+
+// Save each element’s original text so we can detect translation
+document.querySelectorAll(".selection").forEach(el => {
+    el.setAttribute("data-original", el.textContent);
+});
+
+// Start monitoring the page for auto-translation
+observer.observe(document.body, { childList: true, subtree: true });
